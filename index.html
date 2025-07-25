@@ -20,6 +20,11 @@
       padding: 15px;
       margin-bottom: 20px;
     }
+    .appointment {
+      border: 1px solid #aaa;
+      padding: 10px;
+      margin-top: 10px;
+    }
   </style>
 </head>
 <body>
@@ -34,9 +39,13 @@
 
   <div id="panel" class="hidden">
     <button onclick="logout()">Logout</button>
+
     <h2>Medicine Schedule Editor</h2>
     <div id="schedule-container"></div>
     <button onclick="saveSchedule()">Save Schedule</button>
+
+    <h2>Appointment Requests</h2>
+    <div id="appointments-container"></div>
   </div>
 
   <script>
@@ -57,12 +66,14 @@
     const loginSection = document.getElementById('login-section');
     const panel = document.getElementById('panel');
     const scheduleContainer = document.getElementById('schedule-container');
+    const appointmentsContainer = document.getElementById('appointments-container');
 
     auth.onAuthStateChanged(user => {
       if (user) {
         loginSection.classList.add('hidden');
         panel.classList.remove('hidden');
         loadSchedule();
+        loadAppointments();
       } else {
         loginSection.classList.remove('hidden');
         panel.classList.add('hidden');
@@ -123,6 +134,33 @@
         schedules[`box${i}`] = times;
       }
       db.ref('schedules').set(schedules).then(() => alert('Schedule Saved'));
+    }
+
+    function loadAppointments() {
+      db.ref('appointments').on('value', snap => {
+        appointmentsContainer.innerHTML = '';
+        const data = snap.val();
+        if (data) {
+          Object.keys(data).forEach(id => {
+            const app = data[id];
+            const div = document.createElement('div');
+            div.className = 'appointment';
+            div.innerHTML = `
+              <strong>Date:</strong> ${app.date} <strong>Time:</strong> ${app.time} (${app.ampm})<br>
+              <strong>Status:</strong> ${app.status}<br>
+              <button onclick="updateAppointment('${id}', 'accepted')">Accept</button>
+              <button onclick="updateAppointment('${id}', 'rejected')">Reject</button>
+            `;
+            appointmentsContainer.appendChild(div);
+          });
+        } else {
+          appointmentsContainer.innerHTML = '<em>No appointments yet.</em>';
+        }
+      });
+    }
+
+    function updateAppointment(id, status) {
+      db.ref('appointments/' + id).update({ status });
     }
   </script>
 </body>
