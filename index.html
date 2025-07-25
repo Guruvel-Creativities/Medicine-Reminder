@@ -2,137 +2,157 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Doctor Panel - Medicine Reminder</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Doctor Panel - Medicine Reminder System</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Firebase SDK v9 CDN -->
-  <script src="https://www.gstatic.com/firebasejs/9.24.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.24.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.24.0/firebase-database-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 </head>
-<body class="bg-gray-100 text-gray-800 p-6">
-  <div class="max-w-4xl mx-auto">
+<body class="bg-gray-100 p-6 font-sans">
+  <div class="max-w-4xl mx-auto bg-white p-6 rounded-xl shadow-md">
     <h1 class="text-2xl font-bold mb-4">Doctor Panel - Medicine Reminder System</h1>
 
-    <div id="login-section" class="mb-6">
-      <input id="email" type="email" placeholder="Email" class="p-2 border mr-2" />
-      <input id="password" type="password" placeholder="Password" class="p-2 border mr-2" />
-      <button onclick="login()" class="bg-blue-500 text-white px-4 py-2 rounded">Login</button>
+    <!-- Login Form -->
+    <div id="loginSection">
+      <input id="email" type="email" placeholder="Email" class="border p-2 rounded w-60 mb-2">
+      <input id="password" type="password" placeholder="Password" class="border p-2 rounded w-60 mb-2">
+      <button onclick="login()" class="bg-blue-600 text-white px-4 py-2 rounded">Login</button>
     </div>
 
-    <div id="logout-section" class="hidden mb-4">
-      <button onclick="logout()" class="bg-red-500 text-white px-4 py-2 rounded">Logout</button>
-    </div>
-
-    <div id="content" class="hidden">
-      <h2 class="text-xl font-semibold mb-4">Set Medicine Schedule</h2>
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <!-- Boxes -->
-        <script>
-          for (let i = 1; i <= 6; i++) {
-            document.write(`
-              <div class="p-4 border rounded bg-white" id="box-${i}">
-                <h3 class="font-bold mb-2">Box ${i}</h3>
-                <label>No. of Times: <input type="number" min="1" max="5" id="times-${i}" class="border p-1 w-16" onchange="generateTimeInputs(${i})" /></label><br/>
-                <label>Before/After Lunch:
-                  <select id="lunch-${i}" class="border p-1 ml-2">
-                    <option value="Before">Before</option>
-                    <option value="After">After</option>
-                  </select>
-                </label>
-                <div id="time-inputs-${i}" class="mt-2"></div>
-              </div>
-            `);
-          }
-        </script>
+    <!-- Logged-In UI -->
+    <div id="panelSection" class="hidden">
+      <div class="flex justify-between items-center mb-4">
+        <h2 class="text-xl font-semibold">Welcome, Doctor</h2>
+        <button onclick="logout()" class="bg-red-500 text-white px-3 py-1 rounded">Logout</button>
       </div>
 
-      <button onclick="saveSchedule()" class="mt-6 bg-green-600 text-white px-6 py-2 rounded">Save All Schedules</button>
+      <!-- Medicine Schedule -->
+      <h3 class="text-lg font-bold mt-6 mb-2">Set Medicine Schedule</h3>
+      <div id="scheduleContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+
+      <!-- Appointment Requests -->
+      <h3 class="text-lg font-bold mt-6 mb-2">Appointment Requests</h3>
+      <div id="appointmentList" class="space-y-2"></div>
     </div>
   </div>
 
   <script>
-    // Firebase config
     const firebaseConfig = {
-      apiKey: "AIzaSyCSmJ4mePkwBRUy2ZTwbZ5pBGkLaVc-R60",
+      apiKey: "YOUR_API_KEY",
       authDomain: "medicine-reminder-system-5f70c.firebaseapp.com",
+      databaseURL: "https://medicine-reminder-system-5f70c-default-rtdb.firebaseio.com",
       projectId: "medicine-reminder-system-5f70c",
-      databaseURL: "https://medicine-reminder-system-5f70c-default-rtdb.asia-southeast1.firebasedatabase.app",
       storageBucket: "medicine-reminder-system-5f70c.appspot.com",
-      messagingSenderId: "74756460982",
-      appId: "1:74756460982:web:15c0fee07d55af5c91f117"
+      messagingSenderId: "YOUR_MSG_ID",
+      appId: "YOUR_APP_ID"
     };
 
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.database();
 
-    // Login
+    // Auth
     function login() {
       const email = document.getElementById("email").value;
       const password = document.getElementById("password").value;
       auth.signInWithEmailAndPassword(email, password)
         .then(() => {
-          document.getElementById("login-section").classList.add("hidden");
-          document.getElementById("logout-section").classList.remove("hidden");
-          document.getElementById("content").classList.remove("hidden");
+          document.getElementById("loginSection").classList.add("hidden");
+          document.getElementById("panelSection").classList.remove("hidden");
+          loadSchedule();
+          loadAppointments();
         })
-        .catch((err) => alert("Login Failed: " + err.message));
+        .catch(err => alert(err.message));
     }
 
-    // Logout
     function logout() {
       auth.signOut().then(() => {
-        document.getElementById("login-section").classList.remove("hidden");
-        document.getElementById("logout-section").classList.add("hidden");
-        document.getElementById("content").classList.add("hidden");
+        document.getElementById("loginSection").classList.remove("hidden");
+        document.getElementById("panelSection").classList.add("hidden");
       });
     }
 
-    // Dynamic time inputs
-    function generateTimeInputs(box) {
-      const count = parseInt(document.getElementById(`times-${box}`).value) || 0;
-      const container = document.getElementById(`time-inputs-${box}`);
+    // Load Medicine Schedule UI
+    function loadSchedule() {
+      const container = document.getElementById("scheduleContainer");
       container.innerHTML = "";
-      for (let t = 0; t < count; t++) {
-        container.innerHTML += `
-          <input type="time" class="border p-1 mt-1 mr-2" id="time-${box}-${t}" />
+
+      for (let i = 1; i <= 6; i++) {
+        const boxId = `box${i}`;
+        const div = document.createElement("div");
+        div.className = "p-4 border rounded shadow";
+
+        div.innerHTML = `
+          <h4 class="font-semibold mb-2">Box ${i}</h4>
+          <label class="block mb-1">No. of Times:</label>
+          <input type="number" min="1" max="3" id="${boxId}_count" class="border p-1 w-full mb-2" value="1" onchange="updateTimeInputs('${boxId}')">
+
+          <label class="block mb-1">Before/After Lunch:</label>
+          <select id="${boxId}_timing" class="border p-1 w-full mb-2">
+            <option value="Before">Before</option>
+            <option value="After">After</option>
+          </select>
+
+          <div id="${boxId}_times"></div>
+          <button onclick="saveSchedule('${boxId}')" class="mt-2 bg-green-500 text-white px-3 py-1 rounded">Save</button>
         `;
+
+        container.appendChild(div);
+        updateTimeInputs(boxId); // Initialize time input
       }
     }
 
-    // Save all box data to Firebase
-    function saveSchedule() {
-      for (let box = 1; box <= 6; box++) {
-        const times = parseInt(document.getElementById(`times-${box}`).value) || 0;
-        const lunch = document.getElementById(`lunch-${box}`).value;
-        const timings = [];
-        for (let t = 0; t < times; t++) {
-          const timeVal = document.getElementById(`time-${box}-${t}`)?.value;
-          if (timeVal) timings.push(timeVal);
-        }
+    function updateTimeInputs(boxId) {
+      const count = parseInt(document.getElementById(`${boxId}_count`).value);
+      const container = document.getElementById(`${boxId}_times`);
+      container.innerHTML = "";
+      for (let i = 0; i < count; i++) {
+        container.innerHTML += `<input type="time" id="${boxId}_time_${i}" class="border p-1 w-full mb-1" required>`;
+      }
+    }
 
-        db.ref(`boxes/box${box}`).set({
-          count: times,
-          lunch: lunch,
-          times: timings
+    function saveSchedule(boxId) {
+      const count = parseInt(document.getElementById(`${boxId}_count`).value);
+      const timing = document.getElementById(`${boxId}_timing`).value;
+      const times = [];
+
+      for (let i = 0; i < count; i++) {
+        times.push(document.getElementById(`${boxId}_time_${i}`).value);
+      }
+
+      db.ref(`schedule/${boxId}`).set({ count, timing, times })
+        .then(() => alert(`Schedule saved for ${boxId}`))
+        .catch(err => alert(err.message));
+    }
+
+    // Load Appointment Requests
+    function loadAppointments() {
+      const list = document.getElementById("appointmentList");
+      db.ref("appointments").on("value", snapshot => {
+        list.innerHTML = "";
+        snapshot.forEach(child => {
+          const data = child.val();
+          const key = child.key;
+          const div = document.createElement("div");
+          div.className = "p-3 bg-gray-50 rounded border";
+
+          div.innerHTML = `
+            <strong>${data.date} at ${data.time}</strong> - Status: ${data.status || "Pending"}<br/>
+            <button onclick="updateAppointment('${key}', 'Accepted')" class="bg-blue-500 text-white px-2 py-1 mt-1 mr-2 rounded">Accept</button>
+            <button onclick="updateAppointment('${key}', 'Rejected')" class="bg-red-500 text-white px-2 py-1 mt-1 rounded">Reject</button>
+          `;
+
+          list.appendChild(div);
         });
-      }
-
-      alert("Schedule Saved to Firebase!");
+      });
     }
 
-    // Auto-auth display
-    auth.onAuthStateChanged((user) => {
-      if (user) {
-        document.getElementById("login-section").classList.add("hidden");
-        document.getElementById("logout-section").classList.remove("hidden");
-        document.getElementById("content").classList.remove("hidden");
-      } else {
-        document.getElementById("login-section").classList.remove("hidden");
-        document.getElementById("logout-section").classList.add("hidden");
-        document.getElementById("content").classList.add("hidden");
-      }
-    });
+    function updateAppointment(key, status) {
+      db.ref(`appointments/${key}`).update({ status })
+        .then(() => alert(`Appointment ${status}`))
+        .catch(err => alert(err.message));
+    }
   </script>
 </body>
 </html>
