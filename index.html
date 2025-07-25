@@ -5,153 +5,176 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Doctor Panel - Medicine Reminder System</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <script defer src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script defer src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-  <script defer src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <!-- Firebase CDN (Compat SDKs) -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 </head>
 <body class="bg-gray-100 p-6 font-sans">
-  <div class="max-w-4xl mx-auto bg-white p-6 rounded-xl shadow-md">
-    <h1 class="text-2xl font-bold mb-4">Doctor Panel - Medicine Reminder System</h1>
 
-    <!-- Login Form -->
-    <div id="loginSection">
-      <input id="email" type="email" placeholder="Email" class="border p-2 rounded w-60 mb-2">
-      <input id="password" type="password" placeholder="Password" class="border p-2 rounded w-60 mb-2">
-      <button onclick="login()" class="bg-blue-600 text-white px-4 py-2 rounded">Login</button>
-    </div>
+  <div id="loginSection" class="max-w-md mx-auto p-6 bg-white rounded-lg shadow-md">
+    <h2 class="text-2xl font-bold mb-4">Doctor Login</h2>
+    <input type="email" id="email" placeholder="Email" class="w-full p-2 mb-2 border rounded" />
+    <input type="password" id="password" placeholder="Password" class="w-full p-2 mb-4 border rounded" />
+    <button onclick="login()" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Login</button>
+  </div>
 
-    <!-- Logged-In UI -->
-    <div id="panelSection" class="hidden">
-      <div class="flex justify-between items-center mb-4">
-        <h2 class="text-xl font-semibold">Welcome, Doctor</h2>
-        <button onclick="logout()" class="bg-red-500 text-white px-3 py-1 rounded">Logout</button>
+  <div id="mainPanel" class="hidden">
+    <div class="max-w-4xl mx-auto p-4">
+      <div class="flex justify-between items-center mb-6">
+        <h1 class="text-2xl font-bold">Doctor Control Panel</h1>
+        <button onclick="logout()" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">Logout</button>
       </div>
 
-      <!-- Medicine Schedule -->
-      <h3 class="text-lg font-bold mt-6 mb-2">Set Medicine Schedule</h3>
-      <div id="scheduleContainer" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+      <!-- Medicine Schedule Editor -->
+      <div class="bg-white rounded-lg shadow-md p-4 mb-8">
+        <h2 class="text-xl font-semibold mb-4">Medicine Schedule Editor (6 Boxes)</h2>
+        <form id="scheduleForm">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            ${[1, 2, 3, 4, 5, 6].map(i => `
+              <div>
+                <label class="font-semibold">Box ${i}</label>
+                <input type="number" min="1" max="4" placeholder="Number of doses" id="dose${i}" class="w-full p-2 border mb-2 rounded" onchange="generateTimeInputs(${i})" />
+                <div id="timeInputs${i}"></div>
+              </div>
+            `).join('')}
+          </div>
+          <button type="submit" class="mt-4 bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Save Schedule</button>
+        </form>
+      </div>
 
-      <!-- Appointment Requests -->
-      <h3 class="text-lg font-bold mt-6 mb-2">Appointment Requests</h3>
-      <div id="appointmentList" class="space-y-2"></div>
+      <!-- Appointment Manager -->
+      <div class="bg-white rounded-lg shadow-md p-4">
+        <h2 class="text-xl font-semibold mb-4">Appointment Requests</h2>
+        <div id="appointmentList" class="space-y-4"></div>
+      </div>
     </div>
   </div>
 
   <script>
+    // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyCSmJ4mePkwBRUy2ZTwbZ5pBGkLaVc-R60",
       authDomain: "medicine-reminder-system-5f70c.firebaseapp.com",
-      projectId: "medicine-reminder-system-5f70c",
       databaseURL: "https://medicine-reminder-system-5f70c-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "medicine-reminder-system-5f70c",
       storageBucket: "medicine-reminder-system-5f70c.appspot.com",
       messagingSenderId: "74756460982",
       appId: "1:74756460982:web:15c0fee07d55af5c91f117"
     };
 
+    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.database();
 
-    // Auth
+    // UI Elements
+    const loginSection = document.getElementById("loginSection");
+    const mainPanel = document.getElementById("mainPanel");
+
+    // Auth Check
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        loginSection.style.display = "none";
+        mainPanel.style.display = "block";
+        loadSchedule();
+        loadAppointments();
+      } else {
+        loginSection.style.display = "block";
+        mainPanel.style.display = "none";
+      }
+    });
+
     function login() {
       const email = document.getElementById("email").value;
       const password = document.getElementById("password").value;
       auth.signInWithEmailAndPassword(email, password)
-        .then(() => {
-          document.getElementById("loginSection").classList.add("hidden");
-          document.getElementById("panelSection").classList.remove("hidden");
-          loadSchedule();
-          loadAppointments();
-        })
-        .catch(err => alert(err.message));
+        .then(() => alert("Login successful"))
+        .catch(err => alert("Login failed: " + err.message));
     }
 
     function logout() {
-      auth.signOut().then(() => {
-        document.getElementById("loginSection").classList.remove("hidden");
-        document.getElementById("panelSection").classList.add("hidden");
+      auth.signOut().then(() => alert("Logged out"));
+    }
+
+    function generateTimeInputs(box) {
+      const container = document.getElementById(`timeInputs${box}`);
+      container.innerHTML = '';
+      const count = parseInt(document.getElementById(`dose${box}`).value);
+      if (!isNaN(count)) {
+        for (let i = 0; i < count; i++) {
+          container.innerHTML += `
+            <input type="time" class="w-full p-2 border rounded mb-2" id="box${box}_time${i}" />
+          `;
+        }
+      }
+    }
+
+    // Save medicine schedule
+    document.getElementById("scheduleForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const schedule = {};
+      for (let i = 1; i <= 6; i++) {
+        const dose = parseInt(document.getElementById(`dose${i}`).value);
+        const times = [];
+        for (let j = 0; j < dose; j++) {
+          const timeVal = document.getElementById(`box${i}_time${j}`)?.value;
+          if (timeVal) times.push(timeVal);
+        }
+        schedule[`box${i}`] = times;
+      }
+      db.ref("medicineSchedule").set(schedule)
+        .then(() => alert("Schedule saved"))
+        .catch(err => alert("Error saving schedule: " + err.message));
+    });
+
+    function loadSchedule() {
+      db.ref("medicineSchedule").once("value").then(snapshot => {
+        const data = snapshot.val();
+        if (data) {
+          for (let i = 1; i <= 6; i++) {
+            const times = data[`box${i}`] || [];
+            document.getElementById(`dose${i}`).value = times.length;
+            generateTimeInputs(i);
+            times.forEach((time, idx) => {
+              const input = document.getElementById(`box${i}_time${idx}`);
+              if (input) input.value = time;
+            });
+          }
+        }
       });
     }
 
-    // Load Medicine Schedule UI
-    function loadSchedule() {
-      const container = document.getElementById("scheduleContainer");
-      container.innerHTML = "";
-
-      for (let i = 1; i <= 6; i++) {
-        const boxId = `box${i}`;
-        const div = document.createElement("div");
-        div.className = "p-4 border rounded shadow";
-
-        div.innerHTML = `
-          <h4 class="font-semibold mb-2">Box ${i}</h4>
-          <label class="block mb-1">No. of Times:</label>
-          <input type="number" min="1" max="3" id="${boxId}_count" class="border p-1 w-full mb-2" value="1" onchange="updateTimeInputs('${boxId}')">
-
-          <label class="block mb-1">Before/After Lunch:</label>
-          <select id="${boxId}_timing" class="border p-1 w-full mb-2">
-            <option value="Before">Before</option>
-            <option value="After">After</option>
-          </select>
-
-          <div id="${boxId}_times"></div>
-          <button onclick="saveSchedule('${boxId}')" class="mt-2 bg-green-500 text-white px-3 py-1 rounded">Save</button>
-        `;
-
-        container.appendChild(div);
-        updateTimeInputs(boxId); // Initialize time input
-      }
-    }
-
-    function updateTimeInputs(boxId) {
-      const count = parseInt(document.getElementById(`${boxId}_count`).value);
-      const container = document.getElementById(`${boxId}_times`);
-      container.innerHTML = "";
-      for (let i = 0; i < count; i++) {
-        container.innerHTML += `<input type="time" id="${boxId}_time_${i}" class="border p-1 w-full mb-1" required>`;
-      }
-    }
-
-    function saveSchedule(boxId) {
-      const count = parseInt(document.getElementById(`${boxId}_count`).value);
-      const timing = document.getElementById(`${boxId}_timing`).value;
-      const times = [];
-
-      for (let i = 0; i < count; i++) {
-        times.push(document.getElementById(`${boxId}_time_${i}`).value);
-      }
-
-      db.ref(`schedule/${boxId}`).set({ count, timing, times })
-        .then(() => alert(`Schedule saved for ${boxId}`))
-        .catch(err => alert(err.message));
-    }
-
-    // Load Appointment Requests
+    // Load appointments
     function loadAppointments() {
       const list = document.getElementById("appointmentList");
-      db.ref("appointments").on("value", snapshot => {
+      db.ref("appointments").on("value", (snapshot) => {
         list.innerHTML = "";
-        snapshot.forEach(child => {
-          const data = child.val();
-          const key = child.key;
-          const div = document.createElement("div");
-          div.className = "p-3 bg-gray-50 rounded border";
-
-          div.innerHTML = `
-            <strong>${data.date} at ${data.time}</strong> - Status: ${data.status || "Pending"}<br/>
-            <button onclick="updateAppointment('${key}', 'Accepted')" class="bg-blue-500 text-white px-2 py-1 mt-1 mr-2 rounded">Accept</button>
-            <button onclick="updateAppointment('${key}', 'Rejected')" class="bg-red-500 text-white px-2 py-1 mt-1 rounded">Reject</button>
-          `;
-
-          list.appendChild(div);
-        });
+        const data = snapshot.val();
+        if (data) {
+          Object.entries(data).forEach(([id, appt]) => {
+            const status = appt.status || "pending";
+            list.innerHTML += `
+              <div class="border p-3 rounded shadow-sm bg-${status === 'accepted' ? 'green' : status === 'rejected' ? 'red' : 'gray'}-100">
+                <p><strong>Date:</strong> ${appt.date}</p>
+                <p><strong>Time:</strong> ${appt.time}</p>
+                <p><strong>Status:</strong> ${status}</p>
+                ${status === 'pending' ? `
+                  <button onclick="updateStatus('${id}', 'accepted')" class="mr-2 bg-green-600 text-white px-3 py-1 rounded">Accept</button>
+                  <button onclick="updateStatus('${id}', 'rejected')" class="bg-red-600 text-white px-3 py-1 rounded">Reject</button>
+                ` : ""}
+              </div>
+            `;
+          });
+        } else {
+          list.innerHTML = "<p>No appointment requests.</p>";
+        }
       });
     }
 
-    function updateAppointment(key, status) {
-      db.ref(`appointments/${key}`).update({ status })
-        .then(() => alert(`Appointment ${status}`))
-        .catch(err => alert(err.message));
+    function updateStatus(id, status) {
+      db.ref(`appointments/${id}/status`).set(status);
     }
   </script>
 </body>
