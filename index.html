@@ -2,51 +2,52 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Doctor Panel - Medicine Reminder</title>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css" rel="stylesheet" />
+  <style>
+    .hidden { display: none; }
+    .box-container { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+    .appointment { padding: 15px; border-radius: 6px; background: #f1f1f1; margin-bottom: 10px; }
+    .time-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  </style>
+</head>
+<body class="container">
+
+  <h4 class="center-align">Doctor Panel - Medicine Reminder</h4>
+
+  <!-- Login Section -->
+  <div id="login-section" class="card-panel">
+    <h5>Login</h5>
+    <div class="input-field">
+      <input id="email" type="email">
+      <label for="email">Email</label>
+    </div>
+    <div class="input-field">
+      <input id="password" type="password">
+      <label for="password">Password</label>
+    </div>
+    <button class="btn waves-effect waves-light" onclick="login()">Login</button>
+  </div>
+
+  <!-- Panel Section -->
+  <div id="panel" class="hidden">
+    <button class="btn red right" onclick="logout()">Logout</button>
+
+    <h5>Medicine Schedule Editor</h5>
+    <div id="schedule-container"></div>
+    <button class="btn green" onclick="saveSchedule()">Save Schedule</button>
+
+    <h5 class="section">Appointment Requests</h5>
+    <div id="appointments-container"></div>
+  </div>
+
+  <!-- Firebase + Script -->
   <script src="https://www.gstatic.com/firebasejs/9.24.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.24.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.24.0/firebase-database-compat.js"></script>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-    }
-    .hidden {
-      display: none;
-    }
-    .box-container {
-      border: 1px solid #ccc;
-      padding: 15px;
-      margin-bottom: 20px;
-    }
-    .appointment {
-      border: 1px solid #aaa;
-      padding: 10px;
-      margin-top: 10px;
-    }
-  </style>
-</head>
-<body>
-  <h1>Doctor Panel - Medicine Reminder</h1>
-
-  <div id="login-section">
-    <h2>Login</h2>
-    <input type="email" id="email" placeholder="Email"><br>
-    <input type="password" id="password" placeholder="Password"><br>
-    <button onclick="login()">Login</button>
-  </div>
-
-  <div id="panel" class="hidden">
-    <button onclick="logout()">Logout</button>
-
-    <h2>Medicine Schedule Editor</h2>
-    <div id="schedule-container"></div>
-    <button onclick="saveSchedule()">Save Schedule</button>
-
-    <h2>Appointment Requests</h2>
-    <div id="appointments-container"></div>
-  </div>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/js/materialize.min.js"></script>
 
   <script>
     const firebaseConfig = {
@@ -83,7 +84,7 @@
     function login() {
       const email = document.getElementById('email').value;
       const password = document.getElementById('password').value;
-      auth.signInWithEmailAndPassword(email, password).catch(alert);
+      auth.signInWithEmailAndPassword(email, password).catch(err => alert(err.message));
     }
 
     function logout() {
@@ -94,9 +95,15 @@
       scheduleContainer.innerHTML = '';
       for (let i = 1; i <= 6; i++) {
         const boxDiv = document.createElement('div');
-        boxDiv.className = 'box-container';
-        boxDiv.innerHTML = `<h3>Box ${i}</h3>
-          <label>Number of times: </label><input type="number" min="0" max="5" onchange="renderTimes(${i}, this.value)" /><div id="box${i}-times"></div>`;
+        boxDiv.className = 'box-container z-depth-1';
+        boxDiv.innerHTML = `
+          <h6>Box ${i}</h6>
+          <div class="input-field">
+            <input type="number" id="box${i}-count" min="0" max="5" onchange="renderTimes(${i}, this.value)">
+            <label for="box${i}-count">Number of times per day</label>
+          </div>
+          <div id="box${i}-times"></div>
+        `;
         scheduleContainer.appendChild(boxDiv);
       }
     }
@@ -105,26 +112,23 @@
       const container = document.getElementById(`box${box}-times`);
       container.innerHTML = '';
       for (let i = 0; i < count; i++) {
-        const timeInput = document.createElement('input');
-        timeInput.type = 'time';
-        timeInput.id = `box${box}-time${i}`;
-        const foodSelect = document.createElement('select');
-        foodSelect.id = `box${box}-meal${i}`;
-        foodSelect.innerHTML = `
-          <option value="before">Before Food</option>
-          <option value="after">After Food</option>
+        container.innerHTML += `
+          <div class="time-row">
+            <input type="time" id="box${box}-time${i}" class="browser-default">
+            <select id="box${box}-meal${i}" class="browser-default">
+              <option value="before">Before Food</option>
+              <option value="after">After Food</option>
+            </select>
+          </div>
         `;
-        container.appendChild(timeInput);
-        container.appendChild(foodSelect);
-        container.appendChild(document.createElement('br'));
       }
     }
 
     function saveSchedule() {
       const schedules = {};
       for (let i = 1; i <= 6; i++) {
-        const boxTimes = document.getElementById(`box${i}-times`);
-        const inputs = boxTimes.querySelectorAll('input[type="time"]');
+        const timesDiv = document.getElementById(`box${i}-times`);
+        const inputs = timesDiv.querySelectorAll('input[type="time"]');
         const times = [];
         inputs.forEach((input, index) => {
           const time = input.value;
@@ -133,7 +137,7 @@
         });
         schedules[`box${i}`] = times;
       }
-      db.ref('schedules').set(schedules).then(() => alert('Schedule Saved'));
+      db.ref('schedules').set(schedules).then(() => M.toast({ html: 'Schedule Saved', classes: 'green' }));
     }
 
     function loadAppointments() {
@@ -144,12 +148,12 @@
           Object.keys(data).forEach(id => {
             const app = data[id];
             const div = document.createElement('div');
-            div.className = 'appointment';
+            div.className = 'appointment z-depth-1';
             div.innerHTML = `
               <strong>Date:</strong> ${app.date} <strong>Time:</strong> ${app.time} (${app.ampm})<br>
-              <strong>Status:</strong> ${app.status}<br>
-              <button onclick="updateAppointment('${id}', 'accepted')">Accept</button>
-              <button onclick="updateAppointment('${id}', 'rejected')">Reject</button>
+              <strong>Status:</strong> ${app.status}<br><br>
+              <button class="btn-small green" onclick="updateAppointment('${id}', 'accepted')">Accept</button>
+              <button class="btn-small red" onclick="updateAppointment('${id}', 'rejected')">Reject</button>
             `;
             appointmentsContainer.appendChild(div);
           });
@@ -160,7 +164,9 @@
     }
 
     function updateAppointment(id, status) {
-      db.ref('appointments/' + id).update({ status });
+      db.ref('appointments/' + id).update({ status }).then(() => {
+        M.toast({ html: 'Updated to ' + status, classes: status === 'accepted' ? 'green' : 'red' });
+      });
     }
   </script>
 </body>
