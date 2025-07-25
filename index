@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Doctor Panel - Medicine Reminder</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Firebase SDK v9 CDN -->
+  <script src="https://www.gstatic.com/firebasejs/9.24.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.24.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.24.0/firebase-database-compat.js"></script>
+</head>
+<body class="bg-gray-100 text-gray-800 p-6">
+  <div class="max-w-4xl mx-auto">
+    <h1 class="text-2xl font-bold mb-4">Doctor Panel - Medicine Reminder System</h1>
+
+    <div id="login-section" class="mb-6">
+      <input id="email" type="email" placeholder="Email" class="p-2 border mr-2" />
+      <input id="password" type="password" placeholder="Password" class="p-2 border mr-2" />
+      <button onclick="login()" class="bg-blue-500 text-white px-4 py-2 rounded">Login</button>
+    </div>
+
+    <div id="logout-section" class="hidden mb-4">
+      <button onclick="logout()" class="bg-red-500 text-white px-4 py-2 rounded">Logout</button>
+    </div>
+
+    <div id="content" class="hidden">
+      <h2 class="text-xl font-semibold mb-4">Set Medicine Schedule</h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Boxes -->
+        <script>
+          for (let i = 1; i <= 6; i++) {
+            document.write(`
+              <div class="p-4 border rounded bg-white" id="box-${i}">
+                <h3 class="font-bold mb-2">Box ${i}</h3>
+                <label>No. of Times: <input type="number" min="1" max="5" id="times-${i}" class="border p-1 w-16" onchange="generateTimeInputs(${i})" /></label><br/>
+                <label>Before/After Lunch:
+                  <select id="lunch-${i}" class="border p-1 ml-2">
+                    <option value="Before">Before</option>
+                    <option value="After">After</option>
+                  </select>
+                </label>
+                <div id="time-inputs-${i}" class="mt-2"></div>
+              </div>
+            `);
+          }
+        </script>
+      </div>
+
+      <button onclick="saveSchedule()" class="mt-6 bg-green-600 text-white px-6 py-2 rounded">Save All Schedules</button>
+    </div>
+  </div>
+
+  <script>
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCSmJ4mePkwBRUy2ZTwbZ5pBGkLaVc-R60",
+      authDomain: "medicine-reminder-system-5f70c.firebaseapp.com",
+      projectId: "medicine-reminder-system-5f70c",
+      databaseURL: "https://medicine-reminder-system-5f70c-default-rtdb.asia-southeast1.firebasedatabase.app",
+      storageBucket: "medicine-reminder-system-5f70c.appspot.com",
+      messagingSenderId: "74756460982",
+      appId: "1:74756460982:web:15c0fee07d55af5c91f117"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    // Login
+    function login() {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      auth.signInWithEmailAndPassword(email, password)
+        .then(() => {
+          document.getElementById("login-section").classList.add("hidden");
+          document.getElementById("logout-section").classList.remove("hidden");
+          document.getElementById("content").classList.remove("hidden");
+        })
+        .catch((err) => alert("Login Failed: " + err.message));
+    }
+
+    // Logout
+    function logout() {
+      auth.signOut().then(() => {
+        document.getElementById("login-section").classList.remove("hidden");
+        document.getElementById("logout-section").classList.add("hidden");
+        document.getElementById("content").classList.add("hidden");
+      });
+    }
+
+    // Dynamic time inputs
+    function generateTimeInputs(box) {
+      const count = parseInt(document.getElementById(`times-${box}`).value) || 0;
+      const container = document.getElementById(`time-inputs-${box}`);
+      container.innerHTML = "";
+      for (let t = 0; t < count; t++) {
+        container.innerHTML += `
+          <input type="time" class="border p-1 mt-1 mr-2" id="time-${box}-${t}" />
+        `;
+      }
+    }
+
+    // Save all box data to Firebase
+    function saveSchedule() {
+      for (let box = 1; box <= 6; box++) {
+        const times = parseInt(document.getElementById(`times-${box}`).value) || 0;
+        const lunch = document.getElementById(`lunch-${box}`).value;
+        const timings = [];
+        for (let t = 0; t < times; t++) {
+          const timeVal = document.getElementById(`time-${box}-${t}`)?.value;
+          if (timeVal) timings.push(timeVal);
+        }
+
+        db.ref(`boxes/box${box}`).set({
+          count: times,
+          lunch: lunch,
+          times: timings
+        });
+      }
+
+      alert("Schedule Saved to Firebase!");
+    }
+
+    // Auto-auth display
+    auth.onAuthStateChanged((user) => {
+      if (user) {
+        document.getElementById("login-section").classList.add("hidden");
+        document.getElementById("logout-section").classList.remove("hidden");
+        document.getElementById("content").classList.remove("hidden");
+      } else {
+        document.getElementById("login-section").classList.remove("hidden");
+        document.getElementById("logout-section").classList.add("hidden");
+        document.getElementById("content").classList.add("hidden");
+      }
+    });
+  </script>
+</body>
+</html>
