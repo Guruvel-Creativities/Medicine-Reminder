@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Doctor Panel - Medicine Reminder System</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-4">
+
+  <!-- Login Form -->
+  <div id="login-section" class="max-w-md mx-auto bg-white p-6 rounded shadow">
+    <h2 class="text-2xl font-bold mb-4 text-center">Doctor Login</h2>
+    <input id="email" type="email" placeholder="Email" class="w-full p-2 mb-2 border rounded">
+    <input id="password" type="password" placeholder="Password" class="w-full p-2 mb-4 border rounded">
+    <button onclick="login()" class="bg-blue-600 text-white w-full py-2 rounded">Login</button>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="dashboard" class="hidden">
+    <div class="flex justify-between items-center mb-4">
+      <h2 class="text-2xl font-bold">Doctor Dashboard</h2>
+      <button onclick="logout()" class="bg-red-500 text-white px-4 py-2 rounded">Logout</button>
+    </div>
+
+    <!-- Medicine Schedule Section -->
+    <div class="bg-white p-4 rounded shadow mb-6">
+      <h3 class="text-xl font-semibold mb-4">Medicine Schedule</h3>
+      <div class="grid grid-cols-1 gap-4">
+        <div id="medicine-boxes"></div>
+        <button onclick="saveSchedule()" class="bg-green-600 text-white px-4 py-2 rounded">Save Schedule</button>
+      </div>
+    </div>
+
+    <!-- Appointment Section -->
+    <div class="bg-white p-4 rounded shadow">
+      <h3 class="text-xl font-semibold mb-4">Appointment Requests</h3>
+      <ul id="appointment-list" class="space-y-2"></ul>
+    </div>
+  </div>
+
+  <script>
+    // Firebase Configuration
+    var firebaseConfig = {
+      apiKey: "AIzaSyCSmJ4mePkwBRUy2ZTwbZ5pBGkLaVc-R60",
+      authDomain: "medicine-reminder-system-5f70c.firebaseapp.com",
+      projectId: "medicine-reminder-system-5f70c",
+      databaseURL: "https://medicine-reminder-system-5f70c-default-rtdb.asia-southeast1.firebasedatabase.app",
+      storageBucket: "medicine-reminder-system-5f70c.appspot.com",
+      messagingSenderId: "74756460982",
+      appId: "1:74756460982:web:15c0fee07d55af5c91f117"
+    };
+    firebase.initializeApp(firebaseConfig);
+
+    const auth = firebase.auth();
+    const db = firebase.database();
+
+    function login() {
+      const email = document.getElementById('email').value;
+      const password = document.getElementById('password').value;
+      auth.signInWithEmailAndPassword(email, password)
+        .then(() => {
+          document.getElementById('login-section').classList.add('hidden');
+          document.getElementById('dashboard').classList.remove('hidden');
+          loadSchedule();
+          loadAppointments();
+        })
+        .catch(error => alert("Login Failed: " + error.message));
+    }
+
+    function logout() {
+      auth.signOut().then(() => {
+        document.getElementById('login-section').classList.remove('hidden');
+        document.getElementById('dashboard').classList.add('hidden');
+      });
+    }
+
+    function loadSchedule() {
+      const container = document.getElementById('medicine-boxes');
+      container.innerHTML = '';
+      for (let i = 1; i <= 6; i++) {
+        const box = document.createElement('div');
+        box.classList.add('flex', 'items-center', 'mb-2', 'gap-2');
+        box.innerHTML = `
+          <label class="w-24">Box ${i} Times:</label>
+          <input type="number" id="box${i}-count" class="w-16 p-1 border rounded" min="0" max="5" value="0" onchange="renderTimes(${i})">
+          <div id="box${i}-times" class="flex flex-wrap gap-2"></div>
+        `;
+        container.appendChild(box);
+      }
+    }
+
+    function renderTimes(box) {
+      const count = document.getElementById(`box${box}-count`).value;
+      const container = document.getElementById(`box${box}-times`);
+      container.innerHTML = '';
+      for (let i = 0; i < count; i++) {
+        const hourId = `box${box}-hour${i}`;
+        const minuteId = `box${box}-minute${i}`;
+        const ampmId = `box${box}-ampm${i}`;
+        container.innerHTML += `
+          <div class="flex gap-1 items-center">
+            <input type="number" id="${hourId}" placeholder="HH" class="w-12 p-1 border rounded" min="1" max="12">
+            <input type="number" id="${minuteId}" placeholder="MM" class="w-12 p-1 border rounded" min="0" max="59">
+            <select id="${ampmId}" class="p-1 border rounded">
+              <option>AM</option>
+              <option>PM</option>
+            </select>
+          </div>
+        `;
+      }
+    }
+
+    function saveSchedule() {
+      const data = {};
+      for (let i = 1; i <= 6; i++) {
+        const count = parseInt(document.getElementById(`box${i}-count`).value);
+        const times = [];
+        for (let j = 0; j < count; j++) {
+          const hour = parseInt(document.getElementById(`box${i}-hour${j}`).value) || 0;
+          const minute = parseInt(document.getElementById(`box${i}-minute${j}`).value) || 0;
+          const ampm = document.getElementById(`box${i}-ampm${j}`).value;
+          times.push({ hour, minute, ampm });
+        }
+        data[`box${i}`] = times;
+      }
+      db.ref("schedule").set(data).then(() => alert("Schedule saved!"));
+    }
+
+    function loadAppointments() {
+      const list = document.getElementById('appointment-list');
+      list.innerHTML = '';
+      db.ref("appointments").on("value", snapshot => {
+        list.innerHTML = '';
+        snapshot.forEach(child => {
+          const key = child.key;
+          const data = child.val();
+          if (data.status === "pending") {
+            const li = document.createElement('li');
+            li.classList.add('flex', 'justify-between', 'items-center', 'bg-gray-200', 'p-2', 'rounded');
+            li.innerHTML = `
+              <span>${data.date} at ${data.time}</span>
+              <div class="flex gap-2">
+                <button onclick="respond('${key}', 'accepted')" class="bg-green-500 text-white px-2 py-1 rounded">Accept</button>
+                <button onclick="respond('${key}', 'rejected')" class="bg-red-500 text-white px-2 py-1 rounded">Reject</button>
+              </div>
+            `;
+            list.appendChild(li);
+          }
+        });
+      });
+    }
+
+    function respond(id, status) {
+      db.ref("appointments/" + id).update({ status });
+    }
+  </script>
+</body>
+</html>
