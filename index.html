@@ -4,185 +4,241 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Doctor Panel</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
+      background: #f5f7fa;
       margin: 0;
       padding: 0;
-      background-color: #f5f5f5;
     }
+
+    header {
+      background-color: #6a1b9a;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+    }
+
     .container {
-      max-width: 900px;
-      margin: auto;
-      padding: 20px;
-    }
-    h2 {
-      color: #4a148c;
-    }
-    .login-container, .dashboard {
-      background: #fff;
-      padding: 20px;
-      margin-bottom: 20px;
+      max-width: 1000px;
+      margin: 20px auto;
+      padding: 1rem;
+      background: white;
       border-radius: 8px;
     }
-    .hidden {
+
+    .login-section, .dashboard {
       display: none;
     }
-    .box-container {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 15px;
+
+    .form-group {
+      margin-bottom: 1rem;
     }
-    .box {
-      background: #f0e7fa;
-      padding: 15px;
-      border-radius: 8px;
-      box-shadow: 0 0 5px #ccc;
-    }
-    label {
-      font-weight: bold;
-    }
-    select, input[type="text"], input[type="time"] {
+
+    .form-group input,
+    .form-group select {
+      padding: 8px;
       width: 100%;
-      margin-top: 5px;
-      margin-bottom: 10px;
-      padding: 5px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
     }
+
+    .medicine-box {
+      border: 1px solid #aaa;
+      border-radius: 8px;
+      padding: 1rem;
+      margin-bottom: 20px;
+    }
+
+    .time-fields {
+      margin-top: 10px;
+    }
+
     button {
       padding: 10px 20px;
-      background: #4a148c;
-      color: #fff;
+      background-color: #6a1b9a;
+      color: white;
       border: none;
       border-radius: 5px;
       cursor: pointer;
     }
-    .logout-btn {
-      float: right;
+
+    button:disabled {
+      opacity: 0.5;
+    }
+
+    .appointment-list {
+      margin-top: 30px;
+    }
+
+    @media (max-width: 768px) {
+      .time-entry {
+        flex-direction: column;
+      }
     }
   </style>
 </head>
 <body>
+
+  <header>
+    <h1>Doctor Panel - Medicine Reminder</h1>
+  </header>
+
   <div class="container">
-    <div id="login-section" class="login-container">
-      <h2>Doctor Login</h2>
+    <!-- Login Section -->
+    <div class="login-section" id="loginSection">
+      <h3>Login</h3>
       <input type="email" id="email" placeholder="Email" />
       <input type="password" id="password" placeholder="Password" />
       <button onclick="login()">Login</button>
     </div>
 
-    <div id="dashboard" class="dashboard hidden">
-      <h2>Medicine Schedule <button class="logout-btn" onclick="logout()">Logout</button></h2>
-      <div class="box-container">
-        <div class="box" id="box1">
-          <h3>Box 1</h3>
-          <label>Medicine Name:</label>
-          <input type="text" id="med1" />
-          <label>No. of times per day:</label>
-          <select id="times1" onchange="renderTimeInputs(1)">
-            <option value="">Select</option>
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-            <option value="5">5</option>
-          </select>
-          <div id="timeInputs1"></div>
-        </div>
-        <!-- Repeat for other boxes -->
-        <div class="box" id="box2">
-          <h3>Box 2</h3>
-          <label>Medicine Name:</label>
-          <input type="text" id="med2" />
-          <label>No. of times per day:</label>
-          <select id="times2" onchange="renderTimeInputs(2)">
-            <option value="">Select</option>
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-            <option value="5">5</option>
-          </select>
-          <div id="timeInputs2"></div>
-        </div>
-        <!-- Add more boxes up to box6 similarly -->
-      </div>
-      <br>
+    <!-- Dashboard -->
+    <div class="dashboard" id="dashboard">
+      <button onclick="logout()">Logout</button>
+      <h2>Medicine Schedule</h2>
+      <div id="medicineScheduleContainer"></div>
       <button onclick="saveSchedule()">Save Schedule</button>
+
+      <h2 class="appointment-list">Appointments</h2>
+      <div id="appointmentsList"></div>
     </div>
   </div>
+
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
   <script>
     const firebaseConfig = {
       apiKey: "AIzaSyCSmJ4mePkwBRUy2ZTwbZ5pBGkLaVc-R60",
       authDomain: "medicine-reminder-system-5f70c.firebaseapp.com",
       projectId: "medicine-reminder-system-5f70c",
-      databaseURL: "https://medicine-reminder-system-5f70c-default-rtdb.asia-southeast1.firebasedatabase.app",
+      databaseURL: "https://medicine-reminder-system-5f70c-default-rtdb.firebaseio.com", // ✅ Correct region
       storageBucket: "medicine-reminder-system-5f70c.appspot.com",
       messagingSenderId: "74756460982",
       appId: "1:74756460982:web:15c0fee07d55af5c91f117"
     };
+
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.database();
+
+    const loginSection = document.getElementById("loginSection");
+    const dashboard = document.getElementById("dashboard");
+
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        loginSection.style.display = "none";
+        dashboard.style.display = "block";
+        renderMedicineBoxes();
+        loadAppointments();
+      } else {
+        loginSection.style.display = "block";
+        dashboard.style.display = "none";
+      }
+    });
 
     function login() {
       const email = document.getElementById("email").value;
       const password = document.getElementById("password").value;
       auth.signInWithEmailAndPassword(email, password)
-        .then(() => {
-          document.getElementById("login-section").classList.add("hidden");
-          document.getElementById("dashboard").classList.remove("hidden");
-        })
+        .then(() => console.log("Logged in"))
         .catch(err => alert(err.message));
     }
 
     function logout() {
-      auth.signOut().then(() => {
-        document.getElementById("login-section").classList.remove("hidden");
-        document.getElementById("dashboard").classList.add("hidden");
-      });
+      auth.signOut();
     }
 
-    function renderTimeInputs(boxNum) {
-      const count = parseInt(document.getElementById(`times${boxNum}`).value);
-      const container = document.getElementById(`timeInputs${boxNum}`);
+    function renderMedicineBoxes() {
+      const container = document.getElementById("medicineScheduleContainer");
+      container.innerHTML = "";
+      for (let i = 1; i <= 6; i++) {
+        const box = document.createElement("div");
+        box.className = "medicine-box";
+        box.innerHTML = `
+          <h3>Box ${i}</h3>
+          <div class="form-group">
+            <input type="text" placeholder="Medicine Name" id="medName${i}">
+          </div>
+          <div class="form-group">
+            <select id="medCount${i}" onchange="updateTimeInputs(${i})">
+              <option value="">Select No. of Times per Day</option>
+              ${[1, 2, 3, 4, 5].map(n => `<option value="${n}">${n}</option>`).join("")}
+            </select>
+          </div>
+          <div class="time-fields" id="timeFields${i}"></div>
+        `;
+        container.appendChild(box);
+      }
+    }
+
+    function updateTimeInputs(boxIndex) {
+      const count = parseInt(document.getElementById(`medCount${boxIndex}`).value);
+      const container = document.getElementById(`timeFields${boxIndex}`);
       container.innerHTML = "";
       for (let i = 1; i <= count; i++) {
-        container.innerHTML += `
+        const timeGroup = document.createElement("div");
+        timeGroup.className = "form-group";
+        timeGroup.innerHTML = `
           <label>Time ${i}:</label>
-          <input type="time" id="box${boxNum}time${i}" />
-          <label>Food:</label>
-          <select id="box${boxNum}food${i}">
-            <option value="Before Food">Before Food</option>
-            <option value="After Food">After Food</option>
+          <input type="time" id="time${boxIndex}_${i}">
+          <select id="food${boxIndex}_${i}">
+            <option value="before">Before Food</option>
+            <option value="after">After Food</option>
           </select>
         `;
+        container.appendChild(timeGroup);
       }
     }
 
     function saveSchedule() {
-      let schedule = {};
-      for (let b = 1; b <= 2; b++) { // Update to 6 for all boxes
-        const name = document.getElementById(`med${b}`).value;
-        const times = parseInt(document.getElementById(`times${b}`).value);
-        let timings = [];
-        for (let t = 1; t <= times; t++) {
-          const time = document.getElementById(`box${b}time${t}`).value;
-          const food = document.getElementById(`box${b}food${t}`).value;
-          timings.push({ time, food });
+      const schedule = {};
+      for (let i = 1; i <= 6; i++) {
+        const medName = document.getElementById(`medName${i}`).value;
+        const count = parseInt(document.getElementById(`medCount${i}`).value);
+        if (!medName || isNaN(count)) continue;
+
+        const times = [];
+        for (let j = 1; j <= count; j++) {
+          const time = document.getElementById(`time${i}_${j}`).value;
+          const food = document.getElementById(`food${i}_${j}`).value;
+          times.push({ time, food });
         }
-        schedule[`box${b}`] = {
-          name,
-          times,
-          timings
-        };
+        schedule[`box${i}`] = { name: medName, times };
       }
-      db.ref("medicineSchedule").set(schedule)
-        .then(() => alert("Schedule Saved"))
-        .catch((e) => alert("Error: " + e.message));
+
+      db.ref("schedule").set(schedule)
+        .then(() => alert("Schedule saved successfully"))
+        .catch(err => alert("Error saving schedule: " + err.message));
+    }
+
+    function loadAppointments() {
+      const apptList = document.getElementById("appointmentsList");
+      apptList.innerHTML = "Loading...";
+      db.ref("appointments").on("value", snapshot => {
+        apptList.innerHTML = "";
+        if (!snapshot.exists()) {
+          apptList.innerHTML = "No appointments found.";
+          return;
+        }
+        const data = snapshot.val();
+        Object.entries(data).forEach(([id, appt]) => {
+          const div = document.createElement("div");
+          div.innerHTML = `
+            <strong>${appt.date} ${appt.time}</strong> - Status: ${appt.status || 'pending'} 
+            <button onclick="updateAppointment('${id}', 'accepted')">Accept</button>
+            <button onclick="updateAppointment('${id}', 'rejected')">Reject</button>
+          `;
+          apptList.appendChild(div);
+        });
+      });
+    }
+
+    function updateAppointment(id, status) {
+      db.ref(`appointments/${id}/status`).set(status)
+        .then(() => alert(`Appointment ${status}`));
     }
   </script>
 </body>
