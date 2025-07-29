@@ -1,81 +1,74 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Medicine Reminder Dashboard</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Doctor Panel</title>
   <style>
     body {
+      font-family: Arial, sans-serif;
       background-color: #f3f4f6;
-      font-family: 'Segoe UI', sans-serif;
-      padding: 20px;
+      margin: 0;
+      padding: 0;
     }
     .container {
-      max-width: 900px;
-      margin: 0 auto;
-      background: #fff;
+      max-width: 1100px;
+      margin: 20px auto;
       padding: 20px;
+      background-color: #ffffff;
       border-radius: 10px;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
     h2 {
-      text-align: center;
       color: #6b21a8;
+      margin-bottom: 10px;
     }
     .box {
-      margin-top: 20px;
+      border: 2px solid #6b21a8;
+      border-radius: 10px;
       padding: 15px;
-      border: 2px solid #d1d5db;
-      border-radius: 8px;
-      background: #f9fafb;
-    }
-    .box h3 {
-      margin-bottom: 10px;
-      color: #4b5563;
-    }
-    .form-group {
-      margin-bottom: 10px;
+      margin-bottom: 20px;
     }
     label {
       display: block;
-      margin-bottom: 5px;
-      color: #374151;
+      margin-top: 10px;
+      font-weight: bold;
+      color: #333;
     }
     input, select {
       width: 100%;
       padding: 8px;
-      border: 1px solid #d1d5db;
+      margin-top: 5px;
       border-radius: 5px;
+      border: 1px solid #ccc;
     }
-    .time-row {
-      display: flex;
-      gap: 10px;
-      margin-bottom: 10px;
+    .schedule-times {
+      margin-top: 10px;
     }
-    .save-btn {
+    .save-button {
       background-color: #6b21a8;
-      color: white;
+      color: #fff;
       padding: 10px 20px;
+      font-size: 16px;
       border: none;
       border-radius: 5px;
       cursor: pointer;
     }
-    .save-btn:hover {
+    .save-button:hover {
       background-color: #581c87;
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h2>Medicine Schedule (Doctor Panel)</h2>
-
-    <div id="schedule-section"></div>
-
-    <button class="save-btn" onclick="saveSchedule()">Save Schedule</button>
+    <h2>Medicine Schedule</h2>
+    <div id="boxes"></div>
+    <button class="save-button" onclick="saveSchedule()">Save Schedule</button>
   </div>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
   <script>
     const firebaseConfig = {
@@ -90,72 +83,69 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const scheduleSection = document.getElementById("schedule-section");
+    const boxContainer = document.getElementById("boxes");
 
     for (let i = 1; i <= 6; i++) {
       const box = document.createElement("div");
-      box.className = "box";
+      box.classList.add("box");
       box.innerHTML = `
-        <h3>Medicine Box ${i}</h3>
-        <div class="form-group">
-          <label>Medicine Name</label>
-          <input type="text" id="med${i}" placeholder="Enter medicine name">
-        </div>
-        <div class="form-group">
-          <label>Number of Times/Day</label>
-          <select id="count${i}" onchange="renderTimes(${i})">
-            <option value="">Select</option>
-            <option value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-            <option value="5">5</option>
-          </select>
-        </div>
-        <div id="timeInputs${i}"></div>
+        <h3>Box ${i}</h3>
+        <label>Medicine Name:</label>
+        <input type="text" id="medicine-${i}" placeholder="Enter medicine name" />
+
+        <label>Number of Times:</label>
+        <select id="times-${i}" onchange="updateTimeInputs(${i})">
+          <option value="">Select</option>
+          ${[1,2,3,4,5].map(n => `<option value="${n}">${n}</option>`).join('')}
+        </select>
+
+        <div id="time-inputs-${i}" class="schedule-times"></div>
       `;
-      scheduleSection.appendChild(box);
+      boxContainer.appendChild(box);
     }
 
-    function renderTimes(boxNum) {
-      const count = parseInt(document.getElementById(`count${boxNum}`).value);
-      const timeInputs = document.getElementById(`timeInputs${boxNum}`);
-      timeInputs.innerHTML = "";
-      for (let j = 0; j < count; j++) {
-        const row = document.createElement("div");
-        row.className = "time-row";
-        row.innerHTML = `
-          <input type="time" id="time${boxNum}_${j}">
-          <select id="food${boxNum}_${j}">
+    function updateTimeInputs(boxNum) {
+      const times = document.getElementById(`times-${boxNum}`).value;
+      const timeInputsContainer = document.getElementById(`time-inputs-${boxNum}`);
+      timeInputsContainer.innerHTML = "";
+      for (let j = 1; j <= times; j++) {
+        const timeRow = document.createElement("div");
+        timeRow.innerHTML = `
+          <label>Time ${j}:</label>
+          <input type="time" id="time-${boxNum}-${j}" />
+          <label>Food Option:</label>
+          <select id="food-${boxNum}-${j}">
             <option value="Before Food">Before Food</option>
             <option value="After Food">After Food</option>
           </select>
         `;
-        timeInputs.appendChild(row);
+        timeInputsContainer.appendChild(timeRow);
       }
     }
 
     function saveSchedule() {
-      const scheduleData = {};
+      const schedule = {};
       for (let i = 1; i <= 6; i++) {
-        const medName = document.getElementById(`med${i}`).value;
-        const count = parseInt(document.getElementById(`count${i}`).value);
-        const times = [];
-        for (let j = 0; j < count; j++) {
-          const timeVal = document.getElementById(`time${i}_${j}`).value;
-          const foodVal = document.getElementById(`food${i}_${j}`).value;
-          times.push({ time: timeVal, food: foodVal });
+        const medName = document.getElementById(`medicine-${i}`).value;
+        const times = document.getElementById(`times-${i}`).value;
+
+        const boxData = {
+          medicine: medName,
+          times: []
+        };
+
+        for (let j = 1; j <= times; j++) {
+          const time = document.getElementById(`time-${i}-${j}`).value;
+          const food = document.getElementById(`food-${i}-${j}`).value;
+          boxData.times.push({ time, food });
         }
-        if (medName && times.length > 0) {
-          scheduleData[`box${i}`] = {
-            medicine: medName,
-            times: times
-          };
-        }
+
+        schedule[`box${i}`] = boxData;
       }
-      db.ref("/schedule/").set(scheduleData)
-        .then(() => alert("Schedule Saved!"))
-        .catch(err => console.error("Firebase Error:", err));
+
+      db.ref("medicineSchedule").set(schedule)
+        .then(() => alert("Schedule saved successfully!"))
+        .catch((err) => console.error("Error saving schedule:", err));
     }
   </script>
 </body>
