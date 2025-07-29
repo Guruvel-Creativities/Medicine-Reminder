@@ -3,99 +3,85 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Doctor Panel</title>
+  <title>Doctor Panel - Medicine Reminder System</title>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background-color: #f7f6fb;
-      color: #333;
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);
       margin: 0;
       padding: 0;
     }
-    header {
-      background-color: #6b4bb3;
-      color: white;
-      padding: 1rem;
-      text-align: center;
-    }
     .container {
       max-width: 1000px;
-      margin: 2rem auto;
+      margin: auto;
+      padding: 20px;
       background: white;
-      padding: 1rem;
-      border-radius: 8px;
-      box-shadow: 0 0 10px #ccc;
+      border-radius: 12px;
+      margin-top: 30px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
     }
-    .box-schedule {
-      border: 2px solid #6b4bb3;
-      border-radius: 10px;
-      padding: 1rem;
-      margin-bottom: 1.5rem;
+    h2 {
+      color: #5e2787;
     }
-    .box-schedule h3 {
-      color: #6b4bb3;
+    button {
+      padding: 10px 20px;
+      background-color: #5e2787;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-top: 10px;
     }
-    label {
-      display: block;
-      margin-top: 8px;
-    }
-    input, select, button {
-      margin-top: 5px;
-      width: 100%;
-      padding: 6px;
+    input, select {
+      padding: 8px;
+      margin: 5px;
       border-radius: 5px;
       border: 1px solid #ccc;
     }
+    .box {
+      border: 2px solid #5e2787;
+      padding: 15px;
+      margin-bottom: 20px;
+      border-radius: 10px;
+    }
     .time-entry {
+      margin-left: 20px;
       margin-top: 10px;
-      border: 1px dashed #ccc;
-      padding: 10px;
-      border-radius: 6px;
     }
-    .time-entry label {
-      margin-top: 0;
+    .hidden {
+      display: none;
     }
-    .btn-save {
-      background-color: #6b4bb3;
-      color: white;
-      font-weight: bold;
-      border: none;
-      margin-top: 20px;
-      cursor: pointer;
-    }
-    .login-box {
-      text-align: center;
-      margin-top: 20px;
-    }
-    @media(max-width: 600px) {
-      .container {
-        margin: 1rem;
-      }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
   </style>
 </head>
 <body>
-  <header>
-    <h1>Doctor Panel – Medicine Reminder</h1>
-    <button id="logoutBtn" style="float:right; background:white; color:#6b4bb3; padding:5px 10px; border:none; border-radius:5px;">Logout</button>
-  </header>
 
   <div class="container">
-    <div id="loginSection">
-      <h2>Login</h2>
-      <input type="email" id="email" placeholder="Email">
-      <input type="password" id="password" placeholder="Password">
-      <button id="loginBtn">Login</button>
+    <div class="top-bar">
+      <h2>Doctor Panel</h2>
+      <div>
+        <input type="email" id="email" placeholder="Email">
+        <input type="password" id="password" placeholder="Password">
+        <button onclick="login()">Login</button>
+        <button onclick="logout()">Logout</button>
+      </div>
     </div>
 
-    <div id="scheduleSection" style="display:none;">
-      <h2>Medicine Schedule</h2>
-      <div id="boxSchedules"></div>
-      <button class="btn-save" onclick="saveSchedule()">💾 Save Schedule</button>
+    <div id="panel" class="hidden">
+      <h3>Medicine Schedule (6 Boxes)</h3>
+      <div id="boxes"></div>
+      <button onclick="saveSchedule()">💾 Save Schedule</button>
+
+      <hr><h3>Appointments</h3>
+      <ul id="appointmentList"></ul>
     </div>
   </div>
 
-  <!-- Firebase -->
+  <!-- Firebase SDK -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -110,112 +96,110 @@
       messagingSenderId: "74756460982",
       appId: "1:74756460982:web:15c0fee07d55af5c91f117"
     };
+
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.database();
 
-    const email = document.getElementById("email");
-    const password = document.getElementById("password");
-    const loginBtn = document.getElementById("loginBtn");
-    const logoutBtn = document.getElementById("logoutBtn");
-    const loginSection = document.getElementById("loginSection");
-    const scheduleSection = document.getElementById("scheduleSection");
-    const boxSchedules = document.getElementById("boxSchedules");
-
-    loginBtn.addEventListener("click", () => {
-      auth.signInWithEmailAndPassword(email.value, password.value)
+    // Login & Logout
+    function login() {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      auth.signInWithEmailAndPassword(email, password)
         .then(() => {
-          loginSection.style.display = "none";
-          scheduleSection.style.display = "block";
-          loadBoxes();
-        }).catch(err => alert(err.message));
-    });
-
-    logoutBtn.addEventListener("click", () => {
-      auth.signOut().then(() => {
-        loginSection.style.display = "block";
-        scheduleSection.style.display = "none";
-      });
-    });
-
-    function loadBoxes() {
-      boxSchedules.innerHTML = "";
-      for (let i = 1; i <= 6; i++) {
-        const div = document.createElement("div");
-        div.className = "box-schedule";
-        div.innerHTML = `
-          <h3>Box ${i}</h3>
-          <label>Medicine Name</label>
-          <input type="text" id="medName${i}" placeholder="Enter medicine name" />
-          <label>Number of Times</label>
-          <select id="times${i}" onchange="showTimeInputs(${i})">
-            <option value="">Select</option>
-            <option value="1">1 time</option>
-            <option value="2">2 times</option>
-            <option value="3">3 times</option>
-            <option value="4">4 times</option>
-          </select>
-          <div id="timeInputs${i}"></div>
-        `;
-        boxSchedules.appendChild(div);
-      }
+          document.getElementById("panel").classList.remove("hidden");
+          loadAppointments();
+        })
+        .catch(e => alert("Login failed: " + e.message));
     }
 
-    function showTimeInputs(boxNum) {
-      const count = document.getElementById(`times${boxNum}`).value;
-      const container = document.getElementById(`timeInputs${boxNum}`);
+    function logout() {
+      auth.signOut();
+      document.getElementById("panel").classList.add("hidden");
+    }
+
+    auth.onAuthStateChanged(user => {
+      if (user) {
+        document.getElementById("panel").classList.remove("hidden");
+        loadAppointments();
+      } else {
+        document.getElementById("panel").classList.add("hidden");
+      }
+    });
+
+    // Generate 6 Boxes
+    const boxesDiv = document.getElementById("boxes");
+    for (let i = 1; i <= 6; i++) {
+      const box = document.createElement("div");
+      box.className = "box";
+      box.innerHTML = `
+        <h4>Box ${i}</h4>
+        <input placeholder="Medicine Name" id="med${i}">
+        <input type="number" min="0" placeholder="No. of Times" id="times${i}" onchange="generateTimeFields(${i})">
+        <div id="timeFields${i}" class="time-entry"></div>
+      `;
+      boxesDiv.appendChild(box);
+    }
+
+    function generateTimeFields(boxNum) {
+      const count = parseInt(document.getElementById("times" + boxNum).value);
+      const container = document.getElementById("timeFields" + boxNum);
       container.innerHTML = "";
-
-      for (let j = 1; j <= count; j++) {
-        const timeHTML = `
-          <div class="time-entry">
-            <label>Time ${j}</label>
-            <input type="time" id="time${boxNum}_${j}" />
-            <label>Before/After Food</label>
-            <select id="food${boxNum}_${j}">
-              <option value="before">Before Food</option>
-              <option value="after">After Food</option>
-            </select>
-          </div>
+      for (let j = 0; j < count; j++) {
+        const time = document.createElement("div");
+        time.innerHTML = `
+          ⏰ Time ${j + 1}: 
+          <input type="time" id="box${boxNum}time${j}">
+          <select id="box${boxNum}food${j}">
+            <option value="before">Before Food</option>
+            <option value="after">After Food</option>
+          </select>
         `;
-        container.innerHTML += timeHTML;
+        container.appendChild(time);
       }
     }
 
+    // Save Schedule
     function saveSchedule() {
       const schedule = {};
       for (let i = 1; i <= 6; i++) {
-        const medName = document.getElementById(`medName${i}`).value;
-        const times = document.getElementById(`times${i}`).value;
-        const timeEntries = [];
-
-        for (let j = 1; j <= times; j++) {
-          const time = document.getElementById(`time${i}_${j}`).value;
-          const food = document.getElementById(`food${i}_${j}`).value;
-          timeEntries.push({ time, food });
+        const name = document.getElementById(`med${i}`).value;
+        const times = parseInt(document.getElementById(`times${i}`).value || "0");
+        const entries = [];
+        for (let j = 0; j < times; j++) {
+          const timeVal = document.getElementById(`box${i}time${j}`).value;
+          const food = document.getElementById(`box${i}food${j}`).value;
+          entries.push({ time: timeVal, food });
         }
-
-        schedule[`box${i}`] = {
-          medicine: medName,
-          times: timeEntries
-        };
+        schedule[`box${i}`] = { name, times, entries };
       }
+      db.ref("schedule").set(schedule)
+        .then(() => alert("✅ Schedule saved successfully!"))
+        .catch(e => alert("Error saving: " + e.message));
+    }
 
-      db.ref("medicineSchedule").set(schedule).then(() => {
-        alert("Schedule Saved Successfully!");
-      }).catch(err => {
-        alert("Error saving schedule: " + err.message);
+    // Load Appointments
+    function loadAppointments() {
+      db.ref("appointments").on("value", snap => {
+        const list = document.getElementById("appointmentList");
+        list.innerHTML = "";
+        snap.forEach(child => {
+          const item = child.val();
+          const li = document.createElement("li");
+          li.innerHTML = `
+            📅 <b>${item.date}</b> at ${item.time} — 
+            <i>${item.status || "Pending"}</i>
+            <button onclick="updateStatus('${child.key}', 'Accepted')">✅</button>
+            <button onclick="updateStatus('${child.key}', 'Rejected')">❌</button>
+          `;
+          list.appendChild(li);
+        });
       });
     }
 
-    // Auto login session handler
-    auth.onAuthStateChanged(user => {
-      if (user) {
-        loginSection.style.display = "none";
-        scheduleSection.style.display = "block";
-        loadBoxes();
-      }
-    });
+    function updateStatus(key, status) {
+      db.ref("appointments/" + key + "/status").set(status);
+    }
   </script>
 </body>
 </html>
