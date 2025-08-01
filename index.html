@@ -214,11 +214,7 @@
   let inactivityTimer;
 
   function logoutAndResetUI() {
-    firebase.auth().signOut().then(() => {
-      alert("Logged out due to 2 minutes of inactivity.");
-    }).catch((error) => {
-      console.error("Signout failed:", error);
-    });
+    firebase.auth().signOut();
 
     // Manually reset UI regardless of signOut status
     document.getElementById("dashboard").style.display = "none";
