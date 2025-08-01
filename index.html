@@ -209,39 +209,40 @@
       }
     });
   </script>
-  <script>
-  // Set timeout duration (2 minutes = 120000 ms)
-  const INACTIVITY_LIMIT = 2 * 60 * 1000;
+<script>
+  const INACTIVITY_LIMIT = 2 * 60 * 1000; // 2 minutes
   let inactivityTimer;
+
+  function logoutAndResetUI() {
+    firebase.auth().signOut().then(() => {
+      alert("Logged out due to 2 minutes of inactivity.");
+    }).catch((error) => {
+      console.error("Signout failed:", error);
+    });
+
+    // Manually reset UI regardless of signOut status
+    document.getElementById("dashboard").style.display = "none";
+    document.getElementById("login-section").style.display = "block";
+  }
 
   function resetInactivityTimer() {
     clearTimeout(inactivityTimer);
-    inactivityTimer = setTimeout(() => {
-      firebase.auth().signOut().then(() => {
-        alert("Logged out due to inactivity.");
-        document.getElementById("dashboard").style.display = "none";
-        document.getElementById("login-section").style.display = "block";
-      }).catch((error) => {
-        console.error("Auto logout error:", error);
-      });
-    }, INACTIVITY_LIMIT);
+    inactivityTimer = setTimeout(logoutAndResetUI, INACTIVITY_LIMIT);
   }
 
-  // Detect activity events
   function setupInactivityWatcher() {
-    const events = ["mousemove", "keydown", "click", "scroll", "touchstart"];
+    const events = ["mousemove", "mousedown", "keydown", "touchstart", "scroll"];
     events.forEach(event => {
       document.addEventListener(event, resetInactivityTimer);
     });
-    resetInactivityTimer(); // Start initially
+    resetInactivityTimer(); // start on load
   }
 
-  // Start watcher after successful login
   firebase.auth().onAuthStateChanged((user) => {
     if (user) {
       setupInactivityWatcher();
     } else {
-      clearTimeout(inactivityTimer); // Stop timer if user logs out
+      clearTimeout(inactivityTimer); // Stop when logged out
     }
   });
 </script>
