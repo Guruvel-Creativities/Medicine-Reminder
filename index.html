@@ -49,9 +49,6 @@
     .appointment-item {
       background: #f1ecf7; padding: 1rem; margin-bottom: 1rem; border-left: 4px solid #6a1b9a;
     }
-    @media (max-width: 600px) {
-      header { font-size: 1.2rem; }
-    }
   </style>
 </head>
 <body>
@@ -85,12 +82,10 @@
     const firebaseConfig = {
       apiKey: "AIzaSyCSmJ4mePkwBRUy2ZTwbZ5pBGkLaVc-R60",
       authDomain: "medicine-reminder-system-5f70c.firebaseapp.com",
-      projectId: "medicine-reminder-system-5f70c",
       databaseURL: "https://medicine-reminder-system-5f70c-default-rtdb.firebaseio.com",
-      storageBucket: "medicine-reminder-system-5f70c.appspot.com",
-      messagingSenderId: "74756460982",
-      appId: "1:74756460982:web:15c0fee07d55af5c91f117"
+      projectId: "medicine-reminder-system-5f70c",
     };
+
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.database();
@@ -106,6 +101,7 @@
         dashboard.style.display = "block";
         renderBoxes();
         loadAppointments();
+        loadSchedule();  // Load existing data on login
       }).catch(e => alert(e.message));
     }
 
@@ -134,7 +130,7 @@
       }
     }
 
-    function generateTimes(boxId) {
+    function generateTimes(boxId, prefill = []) {
       const count = parseInt(document.getElementById(`times-${boxId}`).value) || 0;
       const container = document.getElementById(`time-inputs-${boxId}`);
       container.innerHTML = '';
@@ -151,6 +147,11 @@
           </select>
         `;
         container.appendChild(div);
+
+        if (prefill[j]) {
+          document.getElementById(`box-${boxId}-time-${j}`).value = prefill[j].time;
+          document.getElementById(`box-${boxId}-food-${j}`).value = prefill[j].food;
+        }
       }
     }
 
@@ -170,6 +171,20 @@
       db.ref("medicine_schedule").set(schedule)
         .then(() => alert("Schedule Saved"))
         .catch(err => alert("Error saving: " + err));
+    }
+
+    function loadSchedule() {
+      db.ref("medicine_schedule").once("value").then(snapshot => {
+        const data = snapshot.val();
+        if (!data) return;
+        for (let i = 1; i <= 6; i++) {
+          const box = data[`box${i}`];
+          if (!box) continue;
+          document.getElementById(`medname-${i}`).value = box.name;
+          document.getElementById(`times-${i}`).value = box.doses.length;
+          generateTimes(i, box.doses);
+        }
+      });
     }
 
     function loadAppointments() {
@@ -203,44 +218,12 @@
         dashboard.style.display = "block";
         renderBoxes();
         loadAppointments();
+        loadSchedule();
       } else {
         loginSection.style.display = "block";
         dashboard.style.display = "none";
       }
     });
   </script>
-<script>
-  const INACTIVITY_LIMIT = 2 * 60 * 1000; // 2 minutes
-  let inactivityTimer;
-
-  function logoutAndResetUI() {
-    firebase.auth().signOut();
-
-    // Manually reset UI regardless of signOut status
-    document.getElementById("dashboard").style.display = "none";
-    document.getElementById("login-section").style.display = "block";
-  }
-
-  function resetInactivityTimer() {
-    clearTimeout(inactivityTimer);
-    inactivityTimer = setTimeout(logoutAndResetUI, INACTIVITY_LIMIT);
-  }
-
-  function setupInactivityWatcher() {
-    const events = ["mousemove", "mousedown", "keydown", "touchstart", "scroll"];
-    events.forEach(event => {
-      document.addEventListener(event, resetInactivityTimer);
-    });
-    resetInactivityTimer(); // start on load
-  }
-
-  firebase.auth().onAuthStateChanged((user) => {
-    if (user) {
-      setupInactivityWatcher();
-    } else {
-      clearTimeout(inactivityTimer); // Stop when logged out
-    }
-  });
-</script>
 </body>
 </html>
