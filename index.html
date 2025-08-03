@@ -183,13 +183,14 @@
             return;
           }
           
-          // Store in the exact format Arduino expects
+          // Create dose entry without quotes around numeric keys
           doses[j] = { 
-            time: time.substring(0, 5), // Store as "HH:MM" (24-hour format)
-            food: food 
+            food: food,
+            time: time.substring(0, 5) // Store as "HH:MM"
           };
         }
         
+        // Create box entry
         schedule[`box${i}`] = {
           name: medname,
           doses: doses
@@ -200,10 +201,14 @@
       
       statusMessage.textContent = "Saving schedule...";
       
+      // Save to Firebase
       db.ref("medicine_schedule").set(schedule)
         .then(() => {
           statusMessage.textContent = "Schedule saved successfully!";
           setTimeout(() => statusMessage.textContent = "", 3000);
+          
+          // Log the exact structure being saved
+          console.log("Saved structure:", JSON.stringify(schedule, null, 2));
         })
         .catch(err => {
           statusMessage.textContent = "Error saving schedule: " + err.message;
@@ -215,6 +220,8 @@
         const data = snapshot.val();
         if (!data) return;
         
+        console.log("Loaded structure:", JSON.stringify(data, null, 2));
+        
         for (let i = 1; i <= 6; i++) {
           const box = data[`box${i}`];
           if (!box) continue;
@@ -225,8 +232,11 @@
             const doseCount = Object.keys(box.doses).length;
             document.getElementById(`times-${i}`).value = doseCount;
             
-            // Convert doses object to array for prefill
-            const dosesArray = Object.values(box.doses);
+            // Convert doses to array for prefill
+            const dosesArray = [];
+            Object.keys(box.doses).sort().forEach(key => {
+              dosesArray.push(box.doses[key]);
+            });
             generateTimes(i, dosesArray);
           }
         }
@@ -234,6 +244,7 @@
         console.error("Error loading schedule:", err);
       });
     }
+
 
     function loadAppointments() {
       const appointEl = document.getElementById("appointments");
