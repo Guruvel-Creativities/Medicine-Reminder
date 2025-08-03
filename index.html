@@ -144,7 +144,7 @@
         const div = document.createElement("div");
         div.className = "dose-entry";
         div.innerHTML = `
-          <label>Dose ${j + 1} Time</label>
+          <label>Dose ${j + 1} Time (24-hour format)</label>
           <input type="time" id="box-${boxId}-time-${j}" required>
           <label>Before/After Food</label>
           <select id="box-${boxId}-food-${j}">
@@ -172,16 +172,22 @@
         const doses = {};
         
         for (let j = 0; j < times; j++) {
-          const time = document.getElementById(`box-${i}-time-${j}`).value;
+          const timeInput = document.getElementById(`box-${i}-time-${j}`);
+          const time = timeInput.value;
           const food = document.getElementById(`box-${i}-food-${j}`).value;
           
           if (!time) {
             alert(`Please enter time for Box ${i}, Dose ${j+1}`);
+            timeInput.focus();
             isValid = false;
             return;
           }
           
-          doses[j] = { time, food }; // Using numeric keys for Firebase array-like structure
+          // Store in the exact format Arduino expects
+          doses[j] = { 
+            time: time.substring(0, 5), // Store as "HH:MM" (24-hour format)
+            food: food 
+          };
         }
         
         schedule[`box${i}`] = {
