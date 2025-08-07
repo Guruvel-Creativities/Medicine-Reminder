@@ -112,9 +112,6 @@
       }, 300000);
     }
 
-    document.addEventListener("mousemove", resetInactivityTimer);
-    document.addEventListener("keypress", resetInactivityTimer);
-
     function login() {
       const email = document.getElementById("email").value;
       const pass = document.getElementById("password").value;
@@ -124,6 +121,8 @@
         renderBoxes();
         loadAppointments();
         loadSchedule();
+        document.addEventListener("mousemove", resetInactivityTimer);
+        document.addEventListener("keypress", resetInactivityTimer);
         resetInactivityTimer();
       }).catch(e => alert("Login failed: " + e.message));
     }
